@@ -1,0 +1,11 @@
+{
+  "printWidth": 500,
+  "overrides": [
+    {
+      "files": ["src/assets/CHARACTERS.tsx", "src/assets/SCENARIOS.tsx"],
+      "options": {
+        "printWidth": 1000
+      }
+    }
+  ]
+}
