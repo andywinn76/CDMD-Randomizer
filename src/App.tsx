@@ -156,8 +156,6 @@ export default function App() {
   }
 
   // UI helpers
-  const allOwned = owned.length === COLLECTION.length;
-  const someOwned = owned.length > 0 && !allOwned;
 
   function toggleOwned(id: ID) {
     setOwned((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
