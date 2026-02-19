@@ -218,7 +218,7 @@ export default function App() {
         <div className="mx-auto max-w-4xl px-4 py-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h1 className="text-xl font-bold tracking-tight">Cthulhu: Death May Die — Randomizer</h1>
+              <h1 className="text-xl font-bold tracking-tight text-slate-600">Cthulhu: Death May Die — Randomizer</h1>
               <p className="text-sm text-slate-600">React + TypeScript + Tailwind • Local storage collection</p>
             </div>
             <div className="flex items-center gap-2">
