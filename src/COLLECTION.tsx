@@ -19,7 +19,7 @@ export const COLLECTION: CollectionItem[] = [
   { id: "Comic Book Vol. 2", name: "Comic Book Vol. 2", season: 4, type: "expansion" },
 
   // Standalone / special expansions (you can split these later if you want)
-  { id: "Yog Sothoth", name: "Yog Sothoth", season: 1, type: "expansion" },
+  { id: "Yog-Sothoth", name: "Yog-Sothoth", season: 1, type: "expansion" },
   { id: "Black Goat of the Woods", name: "Black Goat of the Woods", season: 1, type: "expansion" },
   { id: "Ithaqua", name: "Ithaqua", season: 3, type: "expansion" },
 

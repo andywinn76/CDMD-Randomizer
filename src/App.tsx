@@ -7,7 +7,7 @@ import SectionTitle from "./assets/components/SectionTitle";
 import ResultCard from "./assets/components/ResultCard";
 
 /**
- * Cthulhu: Death May Die — Randomizer 
+ * Cthulhu: Death May Die — Randomizer
  * -----------------------------------------------------
  * Stack: React + TypeScript + TailwindCSS
  * Deploy: Vercel
@@ -37,6 +37,20 @@ type ID = string;
 type SeasonNumber = 1 | 2 | 3 | 4 | 5 | 6 | string;
 
 type CollectionType = "season" | "expansion";
+
+type PlayerCount = 1 | 2 | 3 | 4;
+
+type CharacterSlot = {
+  slotId: string; // stable key
+  playerLabel: string; // "Player 1", "Player 2", etc. For solo, you can do "Player 1 (A/B)"
+  locked: boolean; // "Keep"
+  value: Character | null;
+};
+
+const LS_KEYS = {
+  owned: "cddmd_owned_collection_v1",
+  players: "cddmd_player_count_v1",
+};
 
 export interface CollectionItem {
   id: ID; // unique key like "S1" or "EXP_S1_BLACK_GOAT"
@@ -69,14 +83,64 @@ export interface Scenario {
  *  Utils
  *************************/
 
-function pickRandom<T>(arr: T[]): T | null {
+function getCollectionById(id: ID): CollectionItem | undefined {
+  return COLLECTION.find((c) => c.id === id);
+}
+
+function makeCharacterSlots(players: PlayerCount): CharacterSlot[] {
+  const count = players === 1 ? 2 : players;
+
+  // labels: solo gets Player 1A / 1B; otherwise Player 1..4
+  if (players === 1) {
+    return [
+      { slotId: "P1A", playerLabel: "Solo Character 1", locked: false, value: null },
+      { slotId: "P1B", playerLabel: "Solo Character 2", locked: false, value: null },
+    ];
+  }
+
+  return Array.from({ length: count }, (_, i) => {
+    const n = i + 1;
+    return { slotId: `P${n}`, playerLabel: `Player ${n}`, locked: false, value: null };
+  });
+}
+
+function pickRandomFrom<T>(arr: T[]): T | null {
   if (!arr.length) return null;
   const idx = Math.floor(Math.random() * arr.length);
   return arr[idx] ?? null;
 }
 
-function getCollectionById(id: ID): CollectionItem | undefined {
-  return COLLECTION.find((c) => c.id === id);
+/**
+ * Roll characters for unlocked slots, trying to avoid duplicates.
+ * - Keeps locked slot values as-is
+ * - Ensures no duplicates among locked + newly rolled, if possible
+ */
+function rollCharacterSlots(slots: CharacterSlot[], pool: Character[]): CharacterSlot[] {
+  // gather already-taken ids from locked slots
+  const taken = new Set<string>();
+  for (const s of slots) {
+    if (s.locked && s.value && pool.some((c) => c.id === s.value!.id)) {
+      taken.add(s.value.id);
+    }
+  }
+
+  // make a mutable "available" list excluding taken
+  let available = pool.filter((c) => !taken.has(c.id));
+
+  return slots.map((slot) => {
+    if (slot.locked) return slot;
+
+    // If we run out (tiny pool), fall back to full pool (duplicates possible)
+    const source = available.length ? available : pool;
+    const next = pickRandomFrom(source);
+
+    // If we successfully picked from available, remove it to keep uniqueness
+    if (next && available.length) {
+      available = available.filter((c) => c.id !== next.id);
+    }
+
+    return { ...slot, value: next };
+  });
 }
 
 // Generic localStorage hook with TypeScript safety
@@ -113,65 +177,111 @@ function Pill({ children }: { children: React.ReactNode }) {
  *  Main App
  *************************/
 
-type RandomizeFlags = {
-  character: boolean;
-  oldOne: boolean;
-  scenario: boolean;
-};
-
-const DEFAULT_FLAGS: RandomizeFlags = {
-  character: true,
-  oldOne: true,
-  scenario: true,
-};
-
-const LS_KEYS = {
-  owned: "cddmd_owned_collection_v1",
-  flags: "cddmd_randomize_flags_v1",
-};
-
 export default function App() {
   const [owned, setOwned] = useLocalStorage<ID[]>(LS_KEYS.owned, ["S1", "S2", "S3", "S4"]);
-  const [flags, setFlags] = useLocalStorage<RandomizeFlags>(LS_KEYS.flags, DEFAULT_FLAGS);
+  const [playerCount, setPlayerCount] = useLocalStorage<PlayerCount>(LS_KEYS.players, 1);
 
-  const [resultCharacter, setResultCharacter] = useState<Character | null>(null);
+  const [characterSlots, setCharacterSlots] = useState<CharacterSlot[]>(() => makeCharacterSlots(playerCount));
+
+  const [oldOneLocked, setOldOneLocked] = useState(false);
+  const [scenarioLocked, setScenarioLocked] = useState(false);
+
   const [resultOldOne, setResultOldOne] = useState<OldOne | null>(null);
   const [resultScenario, setResultScenario] = useState<Scenario | null>(null);
 
-  // Filter pools by ownership
-  const characterPool = useMemo(() => CHARACTERS.filter((c) => owned.includes(c.expansionId)), [owned]);
-  const oldOnePool = useMemo(() => OLD_ONES.filter((o) => owned.includes(o.expansionId)), [owned]);
-  const scenarioPool = useMemo(() => SCENARIOS.filter((s) => owned.includes(s.expansionId)), [owned]);
+  function updatePlayerCount(next: PlayerCount) {
+    setPlayerCount(next);
+
+    setCharacterSlots((prev) => {
+      const nextSlots = makeCharacterSlots(next);
+
+      // preserve existing slot values/locks where slotId matches
+      const prevById = new Map(prev.map((s) => [s.slotId, s]));
+      return nextSlots.map((s) => {
+        const old = prevById.get(s.slotId);
+        return old ? { ...s, locked: old.locked, value: old.value } : s;
+      });
+    });
+  }
 
   // Simple randomizer
   function randomizeAll() {
-    if (flags.character) setResultCharacter(pickRandom(characterPool));
-    else setResultCharacter(null);
+    // Characters: roll only unlocked slots
+    setCharacterSlots((prev) => rollCharacterSlots(prev, characterPool));
 
-    if (flags.oldOne) setResultOldOne(pickRandom(oldOnePool));
-    else setResultOldOne(null);
+    // Old One: roll only if not locked
+    if (!oldOneLocked) setResultOldOne(pickRandomFrom(oldOnePool));
 
-    if (flags.scenario) setResultScenario(pickRandom(scenarioPool));
-    else setResultScenario(null);
+    // Scenario: roll only if not locked
+    if (!scenarioLocked) setResultScenario(pickRandomFrom(scenarioPool));
   }
 
   // UI helpers
 
   function toggleOwned(id: ID) {
-    setOwned((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
-  }
+  setOwned((prev) => {
+    const isRemoving = prev.includes(id);
+    const nextOwned = isRemoving ? prev.filter((x) => x !== id) : [...prev, id];
+
+    if (isRemoving) {
+      setCharacterSlots((slots) =>
+        slots.map((s) => (s.value?.expansionId === id ? { ...s, value: null, locked: false } : s))
+      );
+
+      setResultOldOne((prevOld) => {
+        const shouldClear = prevOld?.expansionId === id;
+        if (shouldClear) setOldOneLocked(false);
+        return shouldClear ? null : prevOld;
+      });
+
+      setResultScenario((prevScn) => {
+        const shouldClear = prevScn?.expansionId === id;
+        if (shouldClear) setScenarioLocked(false);
+        return shouldClear ? null : prevScn;
+      });
+    }
+
+    return nextOwned;
+  });
+}
 
   function setAllOwned(next: boolean) {
-    setOwned(next ? COLLECTION.map((c) => c.id) : []);
-  }
+  const nextOwned = next ? COLLECTION.map((c) => c.id) : [];
+  setOwned(nextOwned);
+  purgeResultsForOwned(nextOwned);
+}
 
   const resetRef = useRef<HTMLButtonElement | null>(null);
 
   function resetResults() {
-    setResultCharacter(null);
+    setCharacterSlots((prev) => prev.map((s) => ({ ...s, value: null, locked: false })));
     setResultOldOne(null);
+    setOldOneLocked(false);
     setResultScenario(null);
+    setScenarioLocked(false);
   }
+
+  function purgeResultsForOwned(nextOwned: ID[]) {
+  setCharacterSlots((slots) =>
+    slots.map((s) => (s.value && !nextOwned.includes(s.value.expansionId) ? { ...s, value: null, locked: false } : s))
+  );
+
+  setResultOldOne((prev) => {
+    const shouldClear = prev && !nextOwned.includes(prev.expansionId);
+    if (shouldClear) setOldOneLocked(false);
+    return shouldClear ? null : prev;
+  });
+
+  setResultScenario((prev) => {
+    const shouldClear = prev && !nextOwned.includes(prev.expansionId);
+    if (shouldClear) setScenarioLocked(false);
+    return shouldClear ? null : prev;
+  });
+}
+
+  const characterPool = CHARACTERS.filter((c) => owned.includes(c.expansionId));
+  const oldOnePool = OLD_ONES.filter((o) => owned.includes(o.expansionId));
+  const scenarioPool = SCENARIOS.filter((s) => owned.includes(s.expansionId));
 
   const seasonsInCollection = useMemo(() => {
     // Pull unique seasons from COLLECTION, sort numbers first then strings.
@@ -192,25 +302,28 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-  const ids = new Set(COLLECTION.map((c) => c.id));
-  const missing = new Map<string, number>();
+    const ids = new Set(COLLECTION.map((c) => c.id));
+    const missing = new Map<string, number>();
 
-  const all = [...CHARACTERS, ...OLD_ONES, ...SCENARIOS];
-  for (const item of all as any[]) {
-    const key = item.expansionId;
-    if (!ids.has(key)) missing.set(key, (missing.get(key) ?? 0) + 1);
-  }
-
-  if (missing.size) {
-    console.group("Missing COLLECTION ids referenced by data:");
-    for (const [key, count] of Array.from(missing.entries()).sort((a, b) => b[1] - a[1])) {
-      console.warn(`${key}  (referenced ${count}x)`);
+    const all = [...CHARACTERS, ...OLD_ONES, ...SCENARIOS];
+    for (const item of all as any[]) {
+      const key = item.expansionId;
+      if (!ids.has(key)) missing.set(key, (missing.get(key) ?? 0) + 1);
     }
-    console.groupEnd();
-  } else {
-    console.info("✅ All expansionId values match COLLECTION ids");
-  }
-}, []);
+
+    if (missing.size) {
+      console.group("Missing COLLECTION ids referenced by data:");
+      for (const [key, count] of Array.from(missing.entries()).sort((a, b) => b[1] - a[1])) {
+        console.warn(`${key}  (referenced ${count}x)`);
+      }
+      console.groupEnd();
+    } else {
+      console.info("✅ All expansionId values match COLLECTION ids");
+    }
+  }, []);
+
+  const safeOldOne = resultOldOne && owned.includes(resultOldOne.expansionId) ? resultOldOne : null;
+  const safeScenario = resultScenario && owned.includes(resultScenario.expansionId) ? resultScenario : null;
 
   return (
     <div className="min-h-screen bg-linear-to-b from-slate-900 to-slate-800 text-slate-100">
@@ -225,6 +338,14 @@ export default function App() {
               <button onClick={randomizeAll} className="rounded-2xl border border-slate-300 bg-slate-900 px-4 py-2 text-white shadow hover:bg-slate-800 active:scale-[0.99]" title="Randomize based on owned content">
                 Randomize
               </button>
+
+              <select className="rounded-2xl border px-3 py-2 text-slate-700 hover:bg-slate-100" value={playerCount} onChange={(e) => updatePlayerCount(Number(e.target.value) as PlayerCount)} title="Number of players (solo generates 2 characters)">
+                <option value={1}>Solo</option>
+                <option value={2}>2 Players</option>
+                <option value={3}>3 Players</option>
+                <option value={4}>4 Players</option>
+              </select>
+
               <button ref={resetRef} onClick={resetResults} className="rounded-2xl border px-4 py-2 text-slate-700 hover:bg-slate-100" title="Clear current results">
                 Clear
               </button>
@@ -234,10 +355,78 @@ export default function App() {
       </header>
 
       <main className="mx-auto max-w-4xl px-4 py-6 space-y-8">
+
+        {/* Results */}
+        <section className="rounded-3xl border bg-white p-4 shadow-sm">
+          <div className="mb-3 flex items-center justify-between">
+            <SectionTitle variant="dark">Results</SectionTitle>
+            <div className="text-sm text-slate-600">Filtered by your owned collection</div>
+          </div>
+
+          {/* Characters */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {characterSlots.map((slot) => {
+              const c = slot.value && owned.includes(slot.value.expansionId) ? slot.value : null;
+
+              return (
+                <ResultCard
+                  key={slot.slotId}
+                  title={slot.playerLabel}
+                  item={c?.name}
+                  location={c ? getCollectionById(c.expansionId)?.name : undefined}
+                  emptyHint={characterPool.length ? "Click Randomize" : "No characters in owned collection"}
+                  rightSlot={
+                    <label className="flex items-center gap-2 text-xs text-slate-600">
+                      <input
+                        type="checkbox"
+                        className="size-4 accent-slate-800"
+                        disabled={!c}
+                        checked={c ? slot.locked : false}
+                        onChange={(e) => {
+                          const checked = e.target.checked;
+                          setCharacterSlots((prev) => prev.map((s) => (s.slotId === slot.slotId ? { ...s, locked: checked } : s)));
+                        }}
+                      />
+                      Keep
+                    </label>
+                  }
+                />
+              );
+            })}
+          </div>
+
+          <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <ResultCard
+              title="Old One"
+              item={safeOldOne?.name}
+              location={safeOldOne ? getCollectionById(safeOldOne.expansionId)?.name : undefined}
+              emptyHint={oldOnePool.length ? "Click Randomize" : "No Old Ones in owned collection"}
+              rightSlot={
+                <label className="flex items-center gap-2 text-xs text-slate-600">
+                  <input type="checkbox" className="size-4 accent-slate-800" disabled={!safeOldOne} checked={safeOldOne ? oldOneLocked : false} onChange={(e) => setOldOneLocked(e.target.checked)} />
+                  Keep
+                </label>
+              }
+            />
+
+            <ResultCard
+              title="Scenario"
+              item={safeScenario?.name}
+              location={safeScenario ? getCollectionById(safeScenario.expansionId)?.name : undefined}
+              emptyHint={scenarioPool.length ? "Click Randomize" : "No scenarios in owned collection"}
+              rightSlot={
+                <label className="flex items-center gap-2 text-xs text-slate-600">
+                  <input type="checkbox" className="size-4 accent-slate-800" disabled={!safeScenario} checked={safeScenario ? scenarioLocked : false} onChange={(e) => setScenarioLocked(e.target.checked)} />
+                  Keep
+                </label>
+              }
+            />
+          </div>
+        </section>
         {/* Collection selector */}
-        <section className="rounded-2xl bg-slate-800/60 backdrop-blur p-6">
+        <section className="rounded-2xl bg-slate-900/70 backdrop-blur p-6">
           <div className="mb-3 flex items-center justify-between gap-3 ">
-            <SectionTitle>Collection</SectionTitle>
+            <SectionTitle variant="light">Collection</SectionTitle>
             <div className="flex items-center gap-2 text-sm">
               <button onClick={() => setAllOwned(true)} className="rounded-full border px-3 py-1 hover:bg-slate-50">
                 Select all
@@ -288,47 +477,9 @@ export default function App() {
             </div>
           </details>
         </section>
-
-        {/* Randomize options */}
-        <section className="rounded-2xl bg-slate-800/60 backdrop-blur p-6">
-          <SectionTitle>Randomize</SectionTitle>
-          <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <label className="flex items-center gap-2 rounded-xl border p-3">
-              <input type="checkbox" className="size-4 accent-slate-800" checked={flags.character} onChange={(e) => setFlags((f) => ({ ...f, character: e.target.checked }))} />
-              <span>Character</span>
-            </label>
-            <label className="flex items-center gap-2 rounded-xl border p-3">
-              <input type="checkbox" className="size-4 accent-slate-800" checked={flags.oldOne} onChange={(e) => setFlags((f) => ({ ...f, oldOne: e.target.checked }))} />
-              <span>Old One (Boss)</span>
-            </label>
-            <label className="flex items-center gap-2 rounded-xl border p-3">
-              <input type="checkbox" className="size-4 accent-slate-800" checked={flags.scenario} onChange={(e) => setFlags((f) => ({ ...f, scenario: e.target.checked }))} />
-              <span>Scenario</span>
-            </label>
-          </div>
-          <p className="mt-2 text-sm text-slate-600">Monsters coming later ✨</p>
-        </section>
-
-        {/* Results */}
-        <section className="rounded-3xl border bg-white p-4 shadow-sm">
-          <div className="mb-3 flex items-center justify-between">
-            <SectionTitle>Results</SectionTitle>
-            <div className="text-sm text-slate-600">Filtered by your owned collection</div>
-          </div>
-
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <ResultCard title="Character" item={resultCharacter?.name} location={resultCharacter ? getCollectionById(resultCharacter.expansionId)?.name : undefined} emptyHint={characterPool.length ? "Click Randomize" : "No characters in owned collection"} />
-
-            <ResultCard title="Old One" item={resultOldOne?.name} location={resultOldOne ? getCollectionById(resultOldOne.expansionId)?.name : undefined} emptyHint={oldOnePool.length ? "Click Randomize" : "No Old Ones in owned collection"} />
-
-            <ResultCard title="Scenario" item={resultScenario?.name} location={resultScenario ? getCollectionById(resultScenario.expansionId)?.name : undefined} emptyHint={scenarioPool.length ? "Click Randomize" : "No scenarios in owned collection"} />
-          </div>
-        </section>
       </main>
 
-      <footer className="mx-auto max-w-4xl px-4 pb-10 pt-2 text-center text-xs text-slate-500">Built with 💜 by you. Expand the data and ship it to Vercel.</footer>
+      <footer className="mx-auto max-w-4xl px-4 pb-10 pt-2 text-center text-xs text-slate-500">Built with 💜 by Andy Winn.</footer>
     </div>
   );
 }
-
-
