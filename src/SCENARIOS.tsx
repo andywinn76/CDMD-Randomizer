@@ -1,8 +1,8 @@
 import type { Scenario } from "./App";
 
 export const SCENARIOS: Scenario[] = [
-  { id: "S1E1", name: "Blasphemous alchemy", expansionId: "S1", description: "What's worse then cultist? Cultist who've set the place on fire. Another night and another damn ritual to summon an Elder God. We blow up their labs and we can cause a lot of trouble to whatever it is they are summoning." },
-  { id: "S1E2", name: "Tomes of madness", expansionId: "S1", description: "", },
+  { id: "S1E1", name: "Blasphemous Alchemy", expansionId: "S1", description: "What's worse then cultist? Cultist who've set the place on fire. Another night and another damn ritual to summon an Elder God. We blow up their labs and we can cause a lot of trouble to whatever it is they are summoning." },
+  { id: "S1E2", name: "Tomes of Madness", expansionId: "S1", description: "", },
   { id: "S1E3", name: "Danse Macabre", expansionId: "S1", description: "", },
   { id: "S1E4", name: "Eldritch Idols", expansionId: "S1", description: "" },
   { id: "S1E5", name: "Accursed Tide", expansionId: "S1", description: "" },

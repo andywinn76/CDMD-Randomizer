@@ -219,37 +219,44 @@ export default function App() {
   // UI helpers
 
   function toggleOwned(id: ID) {
-  setOwned((prev) => {
-    const isRemoving = prev.includes(id);
-    const nextOwned = isRemoving ? prev.filter((x) => x !== id) : [...prev, id];
+    setOwned((prev) => {
+      const isRemoving = prev.includes(id);
+      const nextOwned = isRemoving ? prev.filter((x) => x !== id) : [...prev, id];
 
-    if (isRemoving) {
-      setCharacterSlots((slots) =>
-        slots.map((s) => (s.value?.expansionId === id ? { ...s, value: null, locked: false } : s))
-      );
+      if (isRemoving) {
+        setCharacterSlots((slots) => slots.map((s) => (s.value?.expansionId === id ? { ...s, value: null, locked: false } : s)));
 
-      setResultOldOne((prevOld) => {
-        const shouldClear = prevOld?.expansionId === id;
-        if (shouldClear) setOldOneLocked(false);
-        return shouldClear ? null : prevOld;
-      });
+        setResultOldOne((prevOld) => {
+          const shouldClear = prevOld?.expansionId === id;
+          if (shouldClear) setOldOneLocked(false);
+          return shouldClear ? null : prevOld;
+        });
 
-      setResultScenario((prevScn) => {
-        const shouldClear = prevScn?.expansionId === id;
-        if (shouldClear) setScenarioLocked(false);
-        return shouldClear ? null : prevScn;
-      });
-    }
+        setResultScenario((prevScn) => {
+          const shouldClear = prevScn?.expansionId === id;
+          if (shouldClear) setScenarioLocked(false);
+          return shouldClear ? null : prevScn;
+        });
+      }
 
-    return nextOwned;
-  });
-}
+      return nextOwned;
+    });
+  }
 
   function setAllOwned(next: boolean) {
-  const nextOwned = next ? COLLECTION.map((c) => c.id) : [];
-  setOwned(nextOwned);
-  purgeResultsForOwned(nextOwned);
-}
+    const nextOwned = next ? COLLECTION.map((c) => c.id) : [];
+    setOwned(nextOwned);
+    purgeResultsForOwned(nextOwned);
+  }
+
+  function formatScenarioTag(id: string): string | null {
+    // Match patterns like S1E1, S10E3, etc.
+    const match = id.match(/^S(\d+)E(\d+)$/);
+    if (!match) return null;
+
+    const [, season, episode] = match;
+    return `S${season}E${episode}`;
+  }
 
   const resetRef = useRef<HTMLButtonElement | null>(null);
 
@@ -262,22 +269,20 @@ export default function App() {
   }
 
   function purgeResultsForOwned(nextOwned: ID[]) {
-  setCharacterSlots((slots) =>
-    slots.map((s) => (s.value && !nextOwned.includes(s.value.expansionId) ? { ...s, value: null, locked: false } : s))
-  );
+    setCharacterSlots((slots) => slots.map((s) => (s.value && !nextOwned.includes(s.value.expansionId) ? { ...s, value: null, locked: false } : s)));
 
-  setResultOldOne((prev) => {
-    const shouldClear = prev && !nextOwned.includes(prev.expansionId);
-    if (shouldClear) setOldOneLocked(false);
-    return shouldClear ? null : prev;
-  });
+    setResultOldOne((prev) => {
+      const shouldClear = prev && !nextOwned.includes(prev.expansionId);
+      if (shouldClear) setOldOneLocked(false);
+      return shouldClear ? null : prev;
+    });
 
-  setResultScenario((prev) => {
-    const shouldClear = prev && !nextOwned.includes(prev.expansionId);
-    if (shouldClear) setScenarioLocked(false);
-    return shouldClear ? null : prev;
-  });
-}
+    setResultScenario((prev) => {
+      const shouldClear = prev && !nextOwned.includes(prev.expansionId);
+      if (shouldClear) setScenarioLocked(false);
+      return shouldClear ? null : prev;
+    });
+  }
 
   const characterPool = CHARACTERS.filter((c) => owned.includes(c.expansionId));
   const oldOnePool = OLD_ONES.filter((o) => owned.includes(o.expansionId));
@@ -324,6 +329,7 @@ export default function App() {
 
   const safeOldOne = resultOldOne && owned.includes(resultOldOne.expansionId) ? resultOldOne : null;
   const safeScenario = resultScenario && owned.includes(resultScenario.expansionId) ? resultScenario : null;
+  const scenarioTag = safeScenario ? formatScenarioTag(safeScenario.id) : null;
 
   return (
     <div className="min-h-screen bg-linear-to-b from-slate-900 to-slate-800 text-slate-100">
@@ -355,7 +361,6 @@ export default function App() {
       </header>
 
       <main className="mx-auto max-w-4xl px-4 py-6 space-y-8">
-
         {/* Results */}
         <section className="rounded-3xl border bg-white p-4 shadow-sm">
           <div className="mb-3 flex items-center justify-between">
@@ -411,7 +416,7 @@ export default function App() {
 
             <ResultCard
               title="Scenario"
-              item={safeScenario?.name}
+              item={safeScenario ? `${scenarioTag ? scenarioTag + ": " : ""}${safeScenario.name}` : undefined}
               location={safeScenario ? getCollectionById(safeScenario.expansionId)?.name : undefined}
               emptyHint={scenarioPool.length ? "Click Randomize" : "No scenarios in owned collection"}
               rightSlot={
