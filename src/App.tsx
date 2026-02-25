@@ -62,6 +62,7 @@ export interface CollectionItem {
 export interface Character {
   id: ID;
   name: string;
+  shortName?: string; // optional shorter name for tight spaces
   expansionId: ID; // which Season/Expansion box it comes from
 }
 
@@ -284,6 +285,10 @@ export default function App() {
     });
   }
 
+  function getCharacterImageSrcById(id: string) {
+    return `/images/investigators/${id}.png`;
+  }
+
   const characterPool = CHARACTERS.filter((c) => owned.includes(c.expansionId));
   const oldOnePool = OLD_ONES.filter((o) => owned.includes(o.expansionId));
   const scenarioPool = SCENARIOS.filter((s) => owned.includes(s.expansionId));
@@ -365,7 +370,7 @@ export default function App() {
         <section className="rounded-3xl border bg-white p-4 shadow-sm">
           <div className="mb-3 flex items-center justify-between">
             <SectionTitle variant="dark">Results</SectionTitle>
-            <div className="text-sm text-slate-600">Filtered by your owned collection</div>
+            <div className="text-sm text-slate-600">Results are randomly selected from items in your collection</div>
           </div>
 
           {/* Characters */}
@@ -380,6 +385,8 @@ export default function App() {
                   item={c?.name}
                   location={c ? getCollectionById(c.expansionId)?.name : undefined}
                   emptyHint={characterPool.length ? "Click Randomize" : "No characters in owned collection"}
+                  imageSrc={c ? getCharacterImageSrcById(c.id) : undefined}
+                  imageAlt={c ? `${c.name} investigator portrait` : undefined}
                   rightSlot={
                     <label className="flex items-center gap-2 text-xs text-slate-600">
                       <input
@@ -431,7 +438,7 @@ export default function App() {
         {/* Collection selector */}
         <section className="rounded-2xl bg-slate-900/70 backdrop-blur p-6">
           <div className="mb-3 flex items-center justify-between gap-3 ">
-            <SectionTitle variant="light">Collection</SectionTitle>
+            <SectionTitle variant="light">My Collection</SectionTitle>
             <div className="flex items-center gap-2 text-sm">
               <button onClick={() => setAllOwned(true)} className="rounded-full border px-3 py-1 hover:bg-slate-50">
                 Select all
@@ -457,7 +464,7 @@ export default function App() {
 
           <details className="group">
             <summary className="cursor-pointer select-none rounded-xl px-2 py-1 text-sm text-slate-200 hover:bg-slate-50">
-              <span className="mr-2 text-blue-400">Choose owned content</span>
+              <span className="mr-2 text-blue-400">Choose your owned content</span>
               <span className="text-slate-400">
                 ({owned.length}/{COLLECTION.length})
               </span>
