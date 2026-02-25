@@ -11,26 +11,26 @@ import ResultCard from "./assets/components/ResultCard";
  * -----------------------------------------------------
  * Stack: React + TypeScript + TailwindCSS
  * Deploy: Vercel
-*
-* This single-file version is meant for quick preview. In a real project you'll
-* split types, data, hooks, and components into separate files.
-*
-* ✅ What it does
-* - Lets users pick what content (Seasons/Expansions) they own
-* - Persists their collection in localStorage
-* - Lets users choose which categories to randomize (Character, Old One, Scenario)
-* - Generates random results filtered by owned content
-* - Shows where each result comes from (Season/Expansion)
-*
+ *
+ * This single-file version is meant for quick preview. In a real project you'll
+ * split types, data, hooks, and components into separate files.
+ *
+ * ✅ What it does
+ * - Lets users pick what content (Seasons/Expansions) they own
+ * - Persists their collection in localStorage
+ * - Lets users choose which categories to randomize (Character, Old One, Scenario)
+ * - Generates random results filtered by owned content
+ * - Shows where each result comes from (Season/Expansion)
+ *
  * 🧩 What you’ll likely add later
  * - Full data set (all Seasons, Expansions, characters, Old Ones, scenarios)
  * - Random Monsters option
  * - Shareable links, advanced filters, multiple result rolls, etc.
-*/
+ */
 
 /*************************
  *  TypeScript: Types
-*************************/
+ *************************/
 
 type ID = string;
 
@@ -80,13 +80,9 @@ export interface Scenario {
   description: string;
 }
 
-const characterPool = CHARACTERS.filter((c) => owned.includes(c.expansionId));
-const oldOnePool = OLD_ONES.filter((o) => owned.includes(o.expansionId));
-const scenarioPool = SCENARIOS.filter((s) => owned.includes(s.expansionId));
-
 /*************************
  *  Utils
-*************************/
+ *************************/
 
 function getCollectionById(id: ID): CollectionItem | undefined {
   return COLLECTION.find((c) => c.id === id);
@@ -166,7 +162,7 @@ function useLocalStorage<T>(key: string, initial: T) {
       // no-op: storage might be unavailable
     }
   }, [key, value]);
-  
+
   return [value, setValue] as const;
 }
 
@@ -193,6 +189,10 @@ export default function App() {
 
   const [resultOldOne, setResultOldOne] = useState<OldOne | null>(null);
   const [resultScenario, setResultScenario] = useState<Scenario | null>(null);
+
+  const characterPool = CHARACTERS.filter((c) => owned.includes(c.expansionId));
+  const oldOnePool = OLD_ONES.filter((o) => owned.includes(o.expansionId));
+  const scenarioPool = SCENARIOS.filter((s) => owned.includes(s.expansionId));
 
   function updatePlayerCount(next: PlayerCount) {
     setPlayerCount(next);
@@ -272,7 +272,7 @@ export default function App() {
     setResultScenario(null);
     setScenarioLocked(false);
   }
-  
+
   function purgeResultsForOwned(nextOwned: ID[]) {
     setCharacterSlots((slots) => slots.map((s) => (s.value && !nextOwned.includes(s.value.expansionId) ? { ...s, value: null, locked: false } : s)));
 
@@ -294,17 +294,16 @@ export default function App() {
   }
 
   useEffect(() => {
-  // Only images for characters in the owned collection
-  const urls = characterPool.map((c) => getCharacterImageSrcById(c.id));
+    // Only images for characters in the owned collection
+    const urls = characterPool.map((c) => getCharacterImageSrcById(c.id));
 
-  // Preload into browser cache
-  for (const url of urls) {
-    const img = new Image();
-    img.decoding = "async";
-    img.src = url;
-  }
-}, [characterPool]);
-
+    // Preload into browser cache
+    for (const url of urls) {
+      const img = new Image();
+      img.decoding = "async";
+      img.src = url;
+    }
+  }, [characterPool]);
 
   const seasonsInCollection = useMemo(() => {
     // Pull unique seasons from COLLECTION, sort numbers first then strings.
