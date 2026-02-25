@@ -57,7 +57,7 @@ function CardImage({ src, alt }: { src: string; alt: string }) {
       src={src}
       alt={alt}
       className="shrink-0 size-12 object-cover object-top border bg-slate-100"
-      loading="lazy"
+      loading="eager"
       onError={() => setFailed(true)}
     />
   );
