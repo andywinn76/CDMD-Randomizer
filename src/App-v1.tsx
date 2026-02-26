@@ -5,7 +5,6 @@ import { OLD_ONES } from "./OLD_ONES";
 import { COLLECTION } from "./COLLECTION";
 import SectionTitle from "./assets/components/SectionTitle";
 import ResultCard from "./assets/components/ResultCard";
-import "./assets/backgrounds.css";
 
 /**
  * Cthulhu: Death May Die — Randomizer
@@ -310,12 +309,12 @@ export default function App() {
       img.src = url;
     }
   }, [characterPool]);
-
+  
   useEffect(() => {
-    if (owned.length === 0 && hasRolled) {
-      setHasRolled(false);
-    }
-  }, [owned.length, hasRolled]);
+  if (owned.length === 0 && hasRolled) {
+    setHasRolled(false);
+  }
+}, [owned.length, hasRolled]);
 
   const seasonsInCollection = useMemo(() => {
     // Pull unique seasons from COLLECTION, sort numbers first then strings.
@@ -340,174 +339,161 @@ export default function App() {
   const scenarioTag = safeScenario ? formatScenarioTag(safeScenario.id) : null;
 
   return (
-    <div className="app-bg min-h-screen bg-slate-800">
-      <div className="min-h-screen bg-linear-to-b from-slate-900/60 to-slate-800/30 text-slate-100">
-        {/* <div className="min-h-screen bg-linear-to-b from-slate-900/80 to-slate-800/80"></div> */}
-        {/* Header */}
-        <header className="sticky top-0 z-10 border-b-3 border-slate-400 bg-white backdrop-blur">
-          <div className="mx-auto max-w-4xl px-4 py-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h1 className="text-xl font-bold tracking-tight text-slate-600">Cthulhu: Death May Die — Randomizer</h1>
-                <p className="text-sm text-slate-600">React + TypeScript + Tailwind • Local storage collection</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <button onClick={randomizeAll} disabled={owned.length === 0} className="rounded-2xl border border-slate-300 bg-slate-900 px-4 py-2 text-white shadow hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.99]" title="Randomize based on owned content">
-                  Randomize
-                </button>
+    <div className="min-h-screen bg-linear-to-b from-slate-900 to-slate-800 text-slate-100">
+      <header className="sticky top-0 z-10 border-b bg-white/90 backdrop-blur">
+        <div className="mx-auto max-w-4xl px-4 py-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h1 className="text-xl font-bold tracking-tight text-slate-600">Cthulhu: Death May Die — Randomizer</h1>
+              <p className="text-sm text-slate-600">React + TypeScript + Tailwind • Local storage collection</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button onClick={randomizeAll} className="rounded-2xl border border-slate-300 bg-slate-900 px-4 py-2 text-white shadow hover:bg-slate-800 active:scale-[0.99]" title="Randomize based on owned content">
+                Randomize
+              </button>
 
-                <select className="rounded-2xl border px-3 py-2 text-slate-700 hover:bg-slate-100" value={playerCount} onChange={(e) => updatePlayerCount(Number(e.target.value) as PlayerCount)} title="Number of players (solo generates 2 characters)">
-                  <option value={1}>Solo</option>
-                  <option value={2}>2 Players</option>
-                  <option value={3}>3 Players</option>
-                  <option value={4}>4 Players</option>
-                </select>
+              <select className="rounded-2xl border px-3 py-2 text-slate-700 hover:bg-slate-100" value={playerCount} onChange={(e) => updatePlayerCount(Number(e.target.value) as PlayerCount)} title="Number of players (solo generates 2 characters)">
+                <option value={1}>Solo</option>
+                <option value={2}>2 Players</option>
+                <option value={3}>3 Players</option>
+                <option value={4}>4 Players</option>
+              </select>
 
-                <button ref={resetRef} onClick={resetResults} className="rounded-2xl border px-4 py-2 text-slate-700 hover:bg-slate-100" title="Clear current results">
-                  Clear
-                </button>
-              </div>
+              <button ref={resetRef} onClick={resetResults} className="rounded-2xl border px-4 py-2 text-slate-700 hover:bg-slate-100" title="Clear current results">
+                Clear
+              </button>
             </div>
           </div>
-        </header>
+        </div>
+      </header>
 
-        <main className="mx-auto max-w-4xl px-4 py-6 space-y-8">
-          {/* Results */}
-          <section className="rounded-3xl border bg-white p-4 shadow-sm opacity-85">
-            <div className="mb-3 items-center">
-              <SectionTitle variant="dark">Results</SectionTitle>
-              <div className="text-sm text-slate-900">{hasRolled ? "Results are randomly selected from items in your collection." : "No current results to display."}</div>
-            </div>
+      <main className="mx-auto max-w-4xl px-4 py-6 space-y-8">
+        {/* Results */}
+        <section className="rounded-3xl border bg-white p-4 shadow-sm">
+          <div className="mb-3 flex items-center justify-between">
+            <SectionTitle variant="dark">Results</SectionTitle>
+            <div className="text-sm text-slate-600">Results are randomly selected from items in your collection</div>
+          </div>
 
-            {/* Results body */}
-            {owned.length === 0 ? (
-              <div className=" p-6 text-2xl text-center text-slate-800">Please add items to your collection below.</div>
-            ) : !hasRolled ? (
-              <div className=" p-6 text-2xl text-center text-slate-800">Click Randomize to begin.</div>
-            ) : (
-              <>
-                {/* Characters */}
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  {characterSlots.map((slot) => {
-                    const c = slot.value && owned.includes(slot.value.expansionId) ? slot.value : null;
+          {/* Characters */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {characterSlots.map((slot) => {
+              const c = slot.value && owned.includes(slot.value.expansionId) ? slot.value : null;
 
-                    return (
-                      <ResultCard
-                        key={slot.slotId}
-                        title={slot.playerLabel}
-                        item={c?.name}
-                        location={c ? getCollectionById(c.expansionId)?.name : undefined}
-                        emptyHint={characterPool.length ? "Click Randomize" : "No characters in owned collection"}
-                        imageSrc={c ? getCharacterImageSrcById(c.id) : undefined}
-                        imageAlt={c ? `${c.name} investigator portrait` : undefined}
-                        rightSlot={
-                          <label className="flex items-center gap-2 text-xs text-slate-600">
-                            <input
-                              type="checkbox"
-                              className="size-4 accent-slate-800"
-                              disabled={!c}
-                              checked={c ? slot.locked : false}
-                              onChange={(e) => {
-                                const checked = e.target.checked;
-                                setCharacterSlots((prev) => prev.map((s) => (s.slotId === slot.slotId ? { ...s, locked: checked } : s)));
-                              }}
-                            />
-                            Keep
-                          </label>
-                        }
+              return (
+                <ResultCard
+                  key={slot.slotId}
+                  title={slot.playerLabel}
+                  item={c?.name}
+                  location={c ? getCollectionById(c.expansionId)?.name : undefined}
+                  emptyHint={characterPool.length ? "Click Randomize" : "No characters in owned collection"}
+                  imageSrc={c ? getCharacterImageSrcById(c.id) : undefined}
+                  imageAlt={c ? `${c.name} investigator portrait` : undefined}
+                  rightSlot={
+                    <label className="flex items-center gap-2 text-xs text-slate-600">
+                      <input
+                        type="checkbox"
+                        className="size-4 accent-slate-800"
+                        disabled={!c}
+                        checked={c ? slot.locked : false}
+                        onChange={(e) => {
+                          const checked = e.target.checked;
+                          setCharacterSlots((prev) => prev.map((s) => (s.slotId === slot.slotId ? { ...s, locked: checked } : s)));
+                        }}
                       />
-                    );
-                  })}
-                </div>
+                      Keep
+                    </label>
+                  }
+                />
+              );
+            })}
+          </div>
 
-                <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <ResultCard
-                    title="Old One"
-                    item={safeOldOne?.name}
-                    location={safeOldOne ? getCollectionById(safeOldOne.expansionId)?.name : undefined}
-                    emptyHint={oldOnePool.length ? "Click Randomize" : "No Old Ones in owned collection"}
-                    rightSlot={
-                      <label className="flex items-center gap-2 text-xs text-slate-600">
-                        <input type="checkbox" className="size-4 accent-slate-800" disabled={!safeOldOne} checked={safeOldOne ? oldOneLocked : false} onChange={(e) => setOldOneLocked(e.target.checked)} />
-                        Keep
-                      </label>
-                    }
-                  />
+          <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <ResultCard
+              title="Old One"
+              item={safeOldOne?.name}
+              location={safeOldOne ? getCollectionById(safeOldOne.expansionId)?.name : undefined}
+              emptyHint={oldOnePool.length ? "Click Randomize" : "No Old Ones in owned collection"}
+              rightSlot={
+                <label className="flex items-center gap-2 text-xs text-slate-600">
+                  <input type="checkbox" className="size-4 accent-slate-800" disabled={!safeOldOne} checked={safeOldOne ? oldOneLocked : false} onChange={(e) => setOldOneLocked(e.target.checked)} />
+                  Keep
+                </label>
+              }
+            />
 
-                  <ResultCard
-                    title="Scenario"
-                    item={safeScenario ? `${scenarioTag ? scenarioTag + ": " : ""}${safeScenario.name}` : undefined}
-                    location={safeScenario ? getCollectionById(safeScenario.expansionId)?.name : undefined}
-                    emptyHint={scenarioPool.length ? "Click Randomize" : "No scenarios in owned collection"}
-                    rightSlot={
-                      <label className="flex items-center gap-2 text-xs text-slate-600">
-                        <input type="checkbox" className="size-4 accent-slate-800" disabled={!safeScenario} checked={safeScenario ? scenarioLocked : false} onChange={(e) => setScenarioLocked(e.target.checked)} />
-                        Keep
-                      </label>
-                    }
-                  />
-                </div>
-              </>
-            )}
-          </section>
-          {/* Collection selector */}
-          <section className="rounded-2xl bg-slate-900/70 backdrop-blur p-6">
-            <div className="mb-3 flex items-center justify-between gap-3 ">
-              <SectionTitle variant="light">My Collection</SectionTitle>
-              <div className="flex items-center gap-2 text-sm">
-                <button onClick={() => setAllOwned(true)} className="rounded-full border px-3 py-1 hover:bg-slate-100 hover:text-slate-900">
-                  Select all
-                </button>
-                <button onClick={() => setAllOwned(false)} className="rounded-full border px-3 py-1 hover:bg-slate-100 hover:text-slate-900">
-                  Clear all
-                </button>
-              </div>
+            <ResultCard
+              title="Scenario"
+              item={safeScenario ? `${scenarioTag ? scenarioTag + ": " : ""}${safeScenario.name}` : undefined}
+              location={safeScenario ? getCollectionById(safeScenario.expansionId)?.name : undefined}
+              emptyHint={scenarioPool.length ? "Click Randomize" : "No scenarios in owned collection"}
+              rightSlot={
+                <label className="flex items-center gap-2 text-xs text-slate-600">
+                  <input type="checkbox" className="size-4 accent-slate-800" disabled={!safeScenario} checked={safeScenario ? scenarioLocked : false} onChange={(e) => setScenarioLocked(e.target.checked)} />
+                  Keep
+                </label>
+              }
+            />
+          </div>
+        </section>
+        {/* Collection selector */}
+        <section className="rounded-2xl bg-slate-900/70 backdrop-blur p-6">
+          <div className="mb-3 flex items-center justify-between gap-3 ">
+            <SectionTitle variant="light">My Collection</SectionTitle>
+            <div className="flex items-center gap-2 text-sm">
+              <button onClick={() => setAllOwned(true)} className="rounded-full border px-3 py-1 hover:bg-slate-50">
+                Select all
+              </button>
+              <button onClick={() => setAllOwned(false)} className="rounded-full border px-3 py-1 hover:bg-slate-50">
+                Clear all
+              </button>
             </div>
+          </div>
 
-            <div className="mb-3 text-sm text-slate-600">
-              <span className="mr-2 text-slate-300">Owned:</span>
-              {owned.length === 0 ? (
-                <Pill>None</Pill>
-              ) : (
-                <span className="inline-flex flex-wrap gap-1 text-slate-100">
-                  {owned.map((id) => (
-                    <Pill key={id}>{getCollectionById(id)?.name ?? id}</Pill>
-                  ))}
-                </span>
-              )}
-            </div>
-
-            <details className="group">
-              <summary className="cursor-pointer select-none rounded-xl px-2 py-1 text-sm text-slate-200 hover:bg-slate-100 hover:text-slate-900">
-                <span className="mr-2 text-blue-400 hover:text-slate-900">Choose your owned content</span>
-                <span className="text-slate-400">
-                  ({owned.length}/{COLLECTION.length})
-                </span>
-              </summary>
-              <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                {seasonsInCollection.map((season) => (
-                  <div key={String(season)} className="rounded-xl border p-3">
-                    <div className="mb-2 font-medium">Season {season}</div>
-                    <ul className="space-y-1">
-                      {COLLECTION.filter((c) => c.season === season).map((c) => (
-                        <li key={c.id} className="flex items-center gap-2">
-                          <label className="flex cursor-pointer items-center gap-2 text-slate-300">
-                            <input type="checkbox" className="size-4 accent-slate-800" checked={owned.includes(c.id)} onChange={() => toggleOwned(c.id)} />
-                            <span className="text-sm">{c.name}</span>
-                            {c.type === "expansion" && <span className="ml-auto rounded bg-slate-500 px-2 py-0.5 text-xs text-slate-100">Expansion</span>}
-                          </label>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
+          <div className="mb-3 text-sm text-slate-600">
+            <span className="mr-2 text-slate-300">Owned:</span>
+            {owned.length === 0 ? (
+              <Pill>None</Pill>
+            ) : (
+              <span className="inline-flex flex-wrap gap-1 text-slate-100">
+                {owned.map((id) => (
+                  <Pill key={id}>{getCollectionById(id)?.name ?? id}</Pill>
                 ))}
-              </div>
-            </details>
-          </section>
-        </main>
+              </span>
+            )}
+          </div>
 
-        <footer className="mx-auto max-w-4xl px-4 pb-10 pt-2 text-center text-xs text-slate-500">Built with 💜 by Andy Winn.</footer>
-      </div>
+          <details className="group">
+            <summary className="cursor-pointer select-none rounded-xl px-2 py-1 text-sm text-slate-200 hover:bg-slate-50">
+              <span className="mr-2 text-blue-400">Choose your owned content</span>
+              <span className="text-slate-400">
+                ({owned.length}/{COLLECTION.length})
+              </span>
+            </summary>
+            <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {seasonsInCollection.map((season) => (
+                <div key={String(season)} className="rounded-xl border p-3">
+                  <div className="mb-2 font-medium">Season {season}</div>
+                  <ul className="space-y-1">
+                    {COLLECTION.filter((c) => c.season === season).map((c) => (
+                      <li key={c.id} className="flex items-center gap-2">
+                        <label className="flex cursor-pointer items-center gap-2 text-slate-300">
+                          <input type="checkbox" className="size-4 accent-slate-800" checked={owned.includes(c.id)} onChange={() => toggleOwned(c.id)} />
+                          <span className="text-sm">{c.name}</span>
+                          {c.type === "expansion" && <span className="ml-auto rounded bg-slate-500 px-2 py-0.5 text-xs text-slate-100">Expansion</span>}
+                        </label>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </details>
+        </section>
+      </main>
+
+      <footer className="mx-auto max-w-4xl px-4 pb-10 pt-2 text-center text-xs text-slate-500">Built with 💜 by Andy Winn.</footer>
     </div>
   );
 }

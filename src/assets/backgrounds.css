@@ -1,0 +1,20 @@
+/* src/backgrounds.css */
+.app-bg {
+  background-position: top center;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
+/* Portrait screens */
+@media (orientation: portrait) {
+  .app-bg {
+    background-image: url("/images/backgrounds/bg_landscape.jpg");
+  }
+}
+
+/* Landscape screens */
+@media (orientation: landscape) {
+  .app-bg {
+    background-image: url("/images/backgrounds/bg_landscape.jpg");
+  }
+}
