@@ -180,22 +180,37 @@ function Pill({ children }: { children: React.ReactNode }) {
  *************************/
 
 export default function App() {
+  // Persist owned collection and player count in localStorage so they survive page refreshes
   const [owned, setOwned] = useLocalStorage<ID[]>(LS_KEYS.owned, ["S1", "S2", "S3", "S4"]);
+
+  // Default to 1 player (2 characters) since solo play is common needing to control 2 characters
   const [playerCount, setPlayerCount] = useLocalStorage<PlayerCount>(LS_KEYS.players, 1);
 
+  // Character slots are more complex (value + locked state), so we manage them separately and reset to initial on player count change
   const [characterSlots, setCharacterSlots] = useState<CharacterSlot[]>(() => makeCharacterSlots(playerCount));
 
+  // Locks for Old One and Scenario results
   const [oldOneLocked, setOldOneLocked] = useState(false);
   const [scenarioLocked, setScenarioLocked] = useState(false);
 
   const [resultOldOne, setResultOldOne] = useState<OldOne | null>(null);
   const [resultScenario, setResultScenario] = useState<Scenario | null>(null);
 
+  // Create pools filtered by owned collection
   const characterPool = CHARACTERS.filter((c) => owned.includes(c.expansionId));
   const oldOnePool = OLD_ONES.filter((o) => owned.includes(o.expansionId));
   const scenarioPool = SCENARIOS.filter((s) => owned.includes(s.expansionId));
 
+  // Track if user has rolled at least once to conditionally show results section and messages
   const [hasRolled, setHasRolled] = useState(false);
+
+  // Control the open state of the collection details element to allow clicking outside to close
+  const [isCollectionOpen, setIsCollectionOpen] = useState(false);
+  const collectionRef = useRef<HTMLDetailsElement | null>(null);
+
+  //Animate results on roll
+  const resultsRef = useRef<HTMLElement | null>(null);
+  const [resultsAnimTick, setResultsAnimTick] = useState(0);
 
   function updatePlayerCount(next: PlayerCount) {
     setPlayerCount(next);
@@ -215,6 +230,8 @@ export default function App() {
   // Simple randomizer
   function randomizeAll() {
     setHasRolled(true);
+    setIsCollectionOpen(false);
+    setResultsAnimTick((n) => n + 1);
 
     // Characters: roll only unlocked slots
     setCharacterSlots((prev) => rollCharacterSlots(prev, characterPool));
@@ -229,34 +246,37 @@ export default function App() {
   // UI helpers
 
   function toggleOwned(id: ID) {
-    setOwned((prev) => {
-      const isRemoving = prev.includes(id);
-      const nextOwned = isRemoving ? prev.filter((x) => x !== id) : [...prev, id];
+  const isRemoving = owned.includes(id);
+  const nextOwned = isRemoving ? owned.filter((x) => x !== id) : [...owned, id];
 
-      if (isRemoving) {
-        setCharacterSlots((slots) => slots.map((s) => (s.value?.expansionId === id ? { ...s, value: null, locked: false } : s)));
+  setOwned(nextOwned);
 
-        setResultOldOne((prevOld) => {
-          const shouldClear = prevOld?.expansionId === id;
-          if (shouldClear) setOldOneLocked(false);
-          return shouldClear ? null : prevOld;
-        });
+  if (isRemoving) {
+    setCharacterSlots((slots) =>
+      slots.map((s) => (s.value?.expansionId === id ? { ...s, value: null, locked: false } : s))
+    );
 
-        setResultScenario((prevScn) => {
-          const shouldClear = prevScn?.expansionId === id;
-          if (shouldClear) setScenarioLocked(false);
-          return shouldClear ? null : prevScn;
-        });
-      }
+    setResultOldOne((prevOld) => {
+      const shouldClear = prevOld?.expansionId === id;
+      if (shouldClear) setOldOneLocked(false);
+      return shouldClear ? null : prevOld;
+    });
 
-      return nextOwned;
+    setResultScenario((prevScn) => {
+      const shouldClear = prevScn?.expansionId === id;
+      if (shouldClear) setScenarioLocked(false);
+      return shouldClear ? null : prevScn;
     });
   }
+
+  if (nextOwned.length === 0) setHasRolled(false);
+}
 
   function setAllOwned(next: boolean) {
     const nextOwned = next ? COLLECTION.map((c) => c.id) : [];
     setOwned(nextOwned);
     purgeResultsForOwned(nextOwned);
+    if (nextOwned.length === 0) setHasRolled(false);
   }
 
   function formatScenarioTag(id: string): string | null {
@@ -312,10 +332,17 @@ export default function App() {
   }, [characterPool]);
 
   useEffect(() => {
-    if (owned.length === 0 && hasRolled) {
-      setHasRolled(false);
+    function handleClickOutside(event: MouseEvent) {
+      if (isCollectionOpen && collectionRef.current && !collectionRef.current.contains(event.target as Node)) {
+        setIsCollectionOpen(false);
+      }
     }
-  }, [owned.length, hasRolled]);
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isCollectionOpen]);
 
   const seasonsInCollection = useMemo(() => {
     // Pull unique seasons from COLLECTION, sort numbers first then strings.
@@ -342,7 +369,6 @@ export default function App() {
   return (
     <div className="app-bg min-h-screen bg-slate-800">
       <div className="min-h-screen bg-linear-to-b from-slate-900/60 to-slate-800/30 text-slate-100">
-        {/* <div className="min-h-screen bg-linear-to-b from-slate-900/80 to-slate-800/80"></div> */}
         {/* Header */}
         <header className="sticky top-0 z-10 border-b-3 border-slate-400 bg-white backdrop-blur">
           <div className="mx-auto max-w-4xl px-4 py-4">
@@ -373,82 +399,88 @@ export default function App() {
 
         <main className="mx-auto max-w-4xl px-4 py-6 space-y-8">
           {/* Results */}
-          <section className="rounded-3xl border bg-white p-4 shadow-sm opacity-85">
-            <div className="mb-3 items-center">
-              <SectionTitle variant="dark">Results</SectionTitle>
-              <div className="text-sm text-slate-900">{hasRolled ? "Results are randomly selected from items in your collection." : "No current results to display."}</div>
+          <section ref={resultsRef} className={"rounded-3xl border bg-white p-4 shadow-sm opacity-85"}>
+            <div key={resultsAnimTick} className="transition-all duration-300 ease-out will-change-transform animate-in fade-in slide-in-from-top-2">
+              <div className="mb-3 items-center">
+                {hasRolled ? (
+                  <>
+                    <SectionTitle variant="dark">Results</SectionTitle>
+                    <div className="text-sm text-slate-900">{hasRolled ? "Results are randomly selected from items in your collection." : "No current results to display."}</div>
+                  </>
+                ) : null}
+              </div>
+
+              {/* Results body */}
+              {owned.length === 0 ? (
+                <div className=" p-6 text-2xl text-center text-slate-800">Please add items to your collection below.</div>
+              ) : !hasRolled ? (
+                <div className=" p-6 text-2xl text-center text-slate-800">Click Randomize to begin.</div>
+              ) : (
+                <>
+                  {/* Characters */}
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    {characterSlots.map((slot) => {
+                      const c = slot.value && owned.includes(slot.value.expansionId) ? slot.value : null;
+
+                      return (
+                        <ResultCard
+                          key={slot.slotId}
+                          title={slot.playerLabel}
+                          item={c?.name}
+                          location={c ? getCollectionById(c.expansionId)?.name : undefined}
+                          emptyHint={characterPool.length ? "Click Randomize" : "No characters in owned collection"}
+                          imageSrc={c ? getCharacterImageSrcById(c.id) : undefined}
+                          imageAlt={c ? `${c.name} investigator portrait` : undefined}
+                          rightSlot={
+                            <label className="flex items-center gap-2 text-xs text-slate-600">
+                              <input
+                                type="checkbox"
+                                className="size-4 accent-slate-800"
+                                disabled={!c}
+                                checked={c ? slot.locked : false}
+                                onChange={(e) => {
+                                  const checked = e.target.checked;
+                                  setCharacterSlots((prev) => prev.map((s) => (s.slotId === slot.slotId ? { ...s, locked: checked } : s)));
+                                }}
+                              />
+                              Keep
+                            </label>
+                          }
+                        />
+                      );
+                    })}
+                  </div>
+
+                  <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <ResultCard
+                      title="Old One"
+                      item={safeOldOne?.name}
+                      location={safeOldOne ? getCollectionById(safeOldOne.expansionId)?.name : undefined}
+                      emptyHint={oldOnePool.length ? "Click Randomize" : "No Old Ones in owned collection"}
+                      rightSlot={
+                        <label className="flex items-center gap-2 text-xs text-slate-600">
+                          <input type="checkbox" className="size-4 accent-slate-800" disabled={!safeOldOne} checked={safeOldOne ? oldOneLocked : false} onChange={(e) => setOldOneLocked(e.target.checked)} />
+                          Keep
+                        </label>
+                      }
+                    />
+
+                    <ResultCard
+                      title="Scenario"
+                      item={safeScenario ? `${scenarioTag ? scenarioTag + ": " : ""}${safeScenario.name}` : undefined}
+                      location={safeScenario ? getCollectionById(safeScenario.expansionId)?.name : undefined}
+                      emptyHint={scenarioPool.length ? "Click Randomize" : "No scenarios in owned collection"}
+                      rightSlot={
+                        <label className="flex items-center gap-2 text-xs text-slate-600">
+                          <input type="checkbox" className="size-4 accent-slate-800" disabled={!safeScenario} checked={safeScenario ? scenarioLocked : false} onChange={(e) => setScenarioLocked(e.target.checked)} />
+                          Keep
+                        </label>
+                      }
+                    />
+                  </div>
+                </>
+              )}
             </div>
-
-            {/* Results body */}
-            {owned.length === 0 ? (
-              <div className=" p-6 text-2xl text-center text-slate-800">Please add items to your collection below.</div>
-            ) : !hasRolled ? (
-              <div className=" p-6 text-2xl text-center text-slate-800">Click Randomize to begin.</div>
-            ) : (
-              <>
-                {/* Characters */}
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  {characterSlots.map((slot) => {
-                    const c = slot.value && owned.includes(slot.value.expansionId) ? slot.value : null;
-
-                    return (
-                      <ResultCard
-                        key={slot.slotId}
-                        title={slot.playerLabel}
-                        item={c?.name}
-                        location={c ? getCollectionById(c.expansionId)?.name : undefined}
-                        emptyHint={characterPool.length ? "Click Randomize" : "No characters in owned collection"}
-                        imageSrc={c ? getCharacterImageSrcById(c.id) : undefined}
-                        imageAlt={c ? `${c.name} investigator portrait` : undefined}
-                        rightSlot={
-                          <label className="flex items-center gap-2 text-xs text-slate-600">
-                            <input
-                              type="checkbox"
-                              className="size-4 accent-slate-800"
-                              disabled={!c}
-                              checked={c ? slot.locked : false}
-                              onChange={(e) => {
-                                const checked = e.target.checked;
-                                setCharacterSlots((prev) => prev.map((s) => (s.slotId === slot.slotId ? { ...s, locked: checked } : s)));
-                              }}
-                            />
-                            Keep
-                          </label>
-                        }
-                      />
-                    );
-                  })}
-                </div>
-
-                <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <ResultCard
-                    title="Old One"
-                    item={safeOldOne?.name}
-                    location={safeOldOne ? getCollectionById(safeOldOne.expansionId)?.name : undefined}
-                    emptyHint={oldOnePool.length ? "Click Randomize" : "No Old Ones in owned collection"}
-                    rightSlot={
-                      <label className="flex items-center gap-2 text-xs text-slate-600">
-                        <input type="checkbox" className="size-4 accent-slate-800" disabled={!safeOldOne} checked={safeOldOne ? oldOneLocked : false} onChange={(e) => setOldOneLocked(e.target.checked)} />
-                        Keep
-                      </label>
-                    }
-                  />
-
-                  <ResultCard
-                    title="Scenario"
-                    item={safeScenario ? `${scenarioTag ? scenarioTag + ": " : ""}${safeScenario.name}` : undefined}
-                    location={safeScenario ? getCollectionById(safeScenario.expansionId)?.name : undefined}
-                    emptyHint={scenarioPool.length ? "Click Randomize" : "No scenarios in owned collection"}
-                    rightSlot={
-                      <label className="flex items-center gap-2 text-xs text-slate-600">
-                        <input type="checkbox" className="size-4 accent-slate-800" disabled={!safeScenario} checked={safeScenario ? scenarioLocked : false} onChange={(e) => setScenarioLocked(e.target.checked)} />
-                        Keep
-                      </label>
-                    }
-                  />
-                </div>
-              </>
-            )}
           </section>
           {/* Collection selector */}
           <section className="rounded-2xl bg-slate-900/70 backdrop-blur p-6">
@@ -477,8 +509,14 @@ export default function App() {
               )}
             </div>
 
-            <details className="group">
-              <summary className="cursor-pointer select-none rounded-xl px-2 py-1 text-sm text-slate-200 hover:bg-slate-100 hover:text-slate-900">
+            <details ref={collectionRef} open={isCollectionOpen} className="group">
+              <summary
+                onClick={(e) => {
+                  e.preventDefault(); // stop native toggle
+                  setIsCollectionOpen((prev) => !prev);
+                }}
+                className="cursor-pointer select-none rounded-xl px-2 py-1 text-sm text-slate-200 hover:bg-slate-100 hover:text-slate-900"
+              >
                 <span className="mr-2 text-blue-400 hover:text-slate-900">Choose your owned content</span>
                 <span className="text-slate-400">
                   ({owned.length}/{COLLECTION.length})
@@ -506,7 +544,7 @@ export default function App() {
           </section>
         </main>
 
-        <footer className="mx-auto max-w-4xl px-4 pb-10 pt-2 text-center text-xs text-slate-500">Built with 💜 by Andy Winn.</footer>
+        <footer className="mx-auto max-w-4xl px-4 pb-10 pt-2 text-center text-sm text-slate-200">Built with love and plenty of coffee by Andy Winn.</footer>
       </div>
     </div>
   );
