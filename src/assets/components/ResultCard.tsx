@@ -9,7 +9,7 @@ type ResultCardProps = {
   // header right side (your checkbox)
   rightSlot?: React.ReactNode;
 
-  // NEW: optional portrait image shown to the right of the item text
+  // NEW: optional portrait image shown to the left of the item text
   imageSrc?: string;
   imageAlt?: string;
 };

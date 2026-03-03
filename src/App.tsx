@@ -246,31 +246,29 @@ export default function App() {
   // UI helpers
 
   function toggleOwned(id: ID) {
-  const isRemoving = owned.includes(id);
-  const nextOwned = isRemoving ? owned.filter((x) => x !== id) : [...owned, id];
+    const isRemoving = owned.includes(id);
+    const nextOwned = isRemoving ? owned.filter((x) => x !== id) : [...owned, id];
 
-  setOwned(nextOwned);
+    setOwned(nextOwned);
 
-  if (isRemoving) {
-    setCharacterSlots((slots) =>
-      slots.map((s) => (s.value?.expansionId === id ? { ...s, value: null, locked: false } : s))
-    );
+    if (isRemoving) {
+      setCharacterSlots((slots) => slots.map((s) => (s.value?.expansionId === id ? { ...s, value: null, locked: false } : s)));
 
-    setResultOldOne((prevOld) => {
-      const shouldClear = prevOld?.expansionId === id;
-      if (shouldClear) setOldOneLocked(false);
-      return shouldClear ? null : prevOld;
-    });
+      setResultOldOne((prevOld) => {
+        const shouldClear = prevOld?.expansionId === id;
+        if (shouldClear) setOldOneLocked(false);
+        return shouldClear ? null : prevOld;
+      });
 
-    setResultScenario((prevScn) => {
-      const shouldClear = prevScn?.expansionId === id;
-      if (shouldClear) setScenarioLocked(false);
-      return shouldClear ? null : prevScn;
-    });
+      setResultScenario((prevScn) => {
+        const shouldClear = prevScn?.expansionId === id;
+        if (shouldClear) setScenarioLocked(false);
+        return shouldClear ? null : prevScn;
+      });
+    }
+
+    if (nextOwned.length === 0) setHasRolled(false);
   }
-
-  if (nextOwned.length === 0) setHasRolled(false);
-}
 
   function setAllOwned(next: boolean) {
     const nextOwned = next ? COLLECTION.map((c) => c.id) : [];
@@ -319,9 +317,25 @@ export default function App() {
     return `/images/investigators/${id}.png`;
   }
 
+  function getOldOneImageSrcById(id: string) {
+    return `/images/oldones/${id}.png`;
+  }
+
   useEffect(() => {
     // Only images for characters in the owned collection
     const urls = characterPool.map((c) => getCharacterImageSrcById(c.id));
+
+    // Preload into browser cache
+    for (const url of urls) {
+      const img = new Image();
+      img.decoding = "async";
+      img.src = url;
+    }
+  }, [characterPool]);
+
+  useEffect(() => {
+    // Only images for old ones in the owned collection
+    const urls = OLD_ONES.map((c) => getOldOneImageSrcById(c.id));
 
     // Preload into browser cache
     for (const url of urls) {
@@ -366,6 +380,8 @@ export default function App() {
   const safeScenario = resultScenario && owned.includes(resultScenario.expansionId) ? resultScenario : null;
   const scenarioTag = safeScenario ? formatScenarioTag(safeScenario.id) : null;
 
+  const showResultsCards = owned.length > 0 && hasRolled;
+
   return (
     <div className="app-bg min-h-screen bg-slate-800">
       <div className="min-h-screen bg-linear-to-b from-slate-900/60 to-slate-800/30 text-slate-100">
@@ -399,8 +415,8 @@ export default function App() {
 
         <main className="mx-auto max-w-4xl px-4 py-6 space-y-8">
           {/* Results */}
-          <section ref={resultsRef} className={"rounded-3xl border bg-white p-4 shadow-sm opacity-85"}>
-            <div key={resultsAnimTick} className="transition-all duration-300 ease-out will-change-transform animate-in fade-in slide-in-from-top-2">
+          <section ref={resultsRef} className={["rounded-3xl", showResultsCards ? "border bg-white p-4 shadow-sm opacity-85" : "p-6"].join(" ")}>
+            <div key={resultsAnimTick} className="transition-all duration-500 ease-out will-change-transform animate-in fade-in slide-in-from-top-2">
               <div className="mb-3 items-center">
                 {hasRolled ? (
                   <>
@@ -411,10 +427,14 @@ export default function App() {
               </div>
 
               {/* Results body */}
-              {owned.length === 0 ? (
-                <div className=" p-6 text-2xl text-center text-slate-800">Please add items to your collection below.</div>
-              ) : !hasRolled ? (
-                <div className=" p-6 text-2xl text-center text-slate-800">Click Randomize to begin.</div>
+              {!showResultsCards ? (
+                <div className="flex items-center justify-center text-center">
+                  <div className="hint-smoke">
+                    <div className="text-4xl tracking-tight text-red-500 glow-animate">
+                      <span className="shimmer-text">{owned.length === 0 ? "Please add items to your collection below." : "Click Randomize to begin."}</span>
+                    </div>
+                  </div>
+                </div>
               ) : (
                 <>
                   {/* Characters */}
@@ -457,6 +477,8 @@ export default function App() {
                       item={safeOldOne?.name}
                       location={safeOldOne ? getCollectionById(safeOldOne.expansionId)?.name : undefined}
                       emptyHint={oldOnePool.length ? "Click Randomize" : "No Old Ones in owned collection"}
+                      imageSrc={safeOldOne ? getOldOneImageSrcById(safeOldOne.id) : undefined}
+                      imageAlt={safeOldOne ? `${safeOldOne.name} old one portrait` : undefined}
                       rightSlot={
                         <label className="flex items-center gap-2 text-xs text-slate-600">
                           <input type="checkbox" className="size-4 accent-slate-800" disabled={!safeOldOne} checked={safeOldOne ? oldOneLocked : false} onChange={(e) => setOldOneLocked(e.target.checked)} />
