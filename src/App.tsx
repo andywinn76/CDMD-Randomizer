@@ -415,8 +415,9 @@ export default function App() {
 
         <main className="mx-auto max-w-4xl px-4 py-6 space-y-8">
           {/* Results */}
+          
           <section ref={resultsRef} className={["rounded-3xl", showResultsCards ? "border bg-white p-4 shadow-sm opacity-85" : "p-6"].join(" ")}>
-            <div key={resultsAnimTick} className="transition-all duration-500 ease-out will-change-transform animate-in fade-in slide-in-from-top-2">
+            <div key={resultsAnimTick} className="animate-in fade-in slide-in-from-bottom-3 duration-2000 ease-out">
               <div className="mb-3 items-center">
                 {hasRolled ? (
                   <>
@@ -429,10 +430,8 @@ export default function App() {
               {/* Results body */}
               {!showResultsCards ? (
                 <div className="flex items-center justify-center text-center">
-                  <div className="hint-smoke">
-                    <div className="text-4xl tracking-tight text-red-500 glow-animate">
-                      <span className="shimmer-text">{owned.length === 0 ? "Please add items to your collection below." : "Click Randomize to begin."}</span>
-                    </div>
+                  <div className="text-4xl tracking-tight text-red-500 glow-animate">
+                    <span className="">{owned.length === 0 ? "Please add items to your collection below." : "Click Randomize to begin."}</span>
                   </div>
                 </div>
               ) : (
