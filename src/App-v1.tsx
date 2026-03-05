@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { CHARACTERS } from "./CHARACTERS";
+import { CHARACTERS } from "./INVESTIGATORS";
 import { SCENARIOS } from "./SCENARIOS";
 import { OLD_ONES } from "./OLD_ONES";
 import { COLLECTION } from "./COLLECTION";
@@ -309,12 +309,12 @@ export default function App() {
       img.src = url;
     }
   }, [characterPool]);
-  
+
   useEffect(() => {
-  if (owned.length === 0 && hasRolled) {
-    setHasRolled(false);
-  }
-}, [owned.length, hasRolled]);
+    if (owned.length === 0 && hasRolled) {
+      setHasRolled(false);
+    }
+  }, [owned.length, hasRolled]);
 
   const seasonsInCollection = useMemo(() => {
     // Pull unique seasons from COLLECTION, sort numbers first then strings.

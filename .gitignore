@@ -22,3 +22,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# development image folders and files 
+/public/images/investigators/unprocessed-images/
+
+# other file versions
+/src/App-v1.tsx

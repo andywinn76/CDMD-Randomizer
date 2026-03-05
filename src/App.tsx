@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { CHARACTERS } from "./CHARACTERS";
+import { CHARACTERS } from "./INVESTIGATORS";
 import { SCENARIOS } from "./SCENARIOS";
 import { OLD_ONES } from "./OLD_ONES";
 import { COLLECTION } from "./COLLECTION";
@@ -244,7 +244,6 @@ export default function App() {
   }
 
   // UI helpers
-
   function toggleOwned(id: ID) {
     const isRemoving = owned.includes(id);
     const nextOwned = isRemoving ? owned.filter((x) => x !== id) : [...owned, id];
@@ -415,7 +414,7 @@ export default function App() {
 
         <main className="mx-auto max-w-4xl px-4 py-6 space-y-8">
           {/* Results */}
-          
+
           <section ref={resultsRef} className={["rounded-3xl", showResultsCards ? "border bg-white p-4 shadow-sm opacity-85" : "p-6"].join(" ")}>
             <div key={resultsAnimTick} className="animate-in fade-in slide-in-from-bottom-3 duration-2000 ease-out">
               <div className="mb-3 items-center">
