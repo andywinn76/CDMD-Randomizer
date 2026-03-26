@@ -453,6 +453,7 @@ export default function App() {
                           emptyHint={characterPool.length ? "Click Randomize" : "No characters in owned collection"}
                           imageSrc={c ? getCharacterImageSrcById(c.id) : undefined}
                           imageAlt={c ? `${c.name} investigator portrait` : undefined}
+                          fallbackImageSrc="/square-placeholder.jpg"
                           rightSlot={
                             <label className="flex items-center gap-2 text-xs text-slate-600">
                               <input
@@ -481,6 +482,7 @@ export default function App() {
                       emptyHint={oldOnePool.length ? "Click Randomize" : "No Old Ones in owned collection"}
                       imageSrc={safeOldOne ? getOldOneImageSrcById(safeOldOne.id) : undefined}
                       imageAlt={safeOldOne ? `${safeOldOne.name} old one portrait` : undefined}
+                      fallbackImageSrc="/coming-soon.jpg"
                       rightSlot={
                         <label className="flex items-center gap-2 text-xs text-slate-600">
                           <input type="checkbox" className="size-4 accent-slate-800" disabled={!safeOldOne} checked={safeOldOne ? oldOneLocked : false} onChange={(e) => setOldOneLocked(e.target.checked)} />
@@ -497,6 +499,7 @@ export default function App() {
                       imageSrc={safeEpisode ? getEpisodeImageSrcById(safeEpisode.id) : undefined}
                       imageAlt={safeEpisode ? `${safeEpisode.name} episode art` : undefined}
                       imageLayout="banner-top"
+                      fallbackImageSrc="/images/episodes/placeholder_episode.jpg"
                       rightSlot={
                         <label className="flex items-center gap-2 text-xs text-slate-600">
                           <input type="checkbox" className="size-4 accent-slate-800" disabled={!safeEpisode} checked={safeEpisode ? episodeLocked : false} onChange={(e) => setEpisodeLocked(e.target.checked)} />

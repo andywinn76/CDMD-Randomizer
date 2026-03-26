@@ -9,47 +9,62 @@ type ResultCardProps = {
 
   imageSrc?: string;
   imageAlt?: string;
-
-  // new
   imageLayout?: "portrait-left" | "banner-top";
+  fallbackImageSrc?: string;
 };
 
 function CardImage({
   src,
   alt,
   layout = "portrait-left",
+  fallbackSrc,
 }: {
   src: string;
   alt: string;
   layout?: "portrait-left" | "banner-top";
+  fallbackSrc?: string;
 }) {
+  const [currentSrc, setCurrentSrc] = React.useState(src);
+  const [hasTriedFallback, setHasTriedFallback] = React.useState(false);
   const [failed, setFailed] = React.useState(false);
 
   React.useEffect(() => {
+    setCurrentSrc(src);
+    setHasTriedFallback(false);
     setFailed(false);
   }, [src]);
+
+  function handleError() {
+    if (fallbackSrc && !hasTriedFallback && currentSrc !== fallbackSrc) {
+      setCurrentSrc(fallbackSrc);
+      setHasTriedFallback(true);
+      return;
+    }
+
+    setFailed(true);
+  }
 
   if (failed) return null;
 
   if (layout === "banner-top") {
     return (
       <img
-        src={src}
+        src={currentSrc}
         alt={alt}
         className="w-full h-40 sm:h-44 object-cover object-center rounded-xl border bg-slate-100 border-b-slate-900 border-b-3"
         loading="eager"
-        onError={() => setFailed(true)}
+        onError={handleError}
       />
     );
   }
 
   return (
     <img
-      src={src}
+      src={currentSrc}
       alt={alt}
       className="shrink-0 size-24 object-cover object-top border bg-slate-100 border-b-slate-900 border-b-3"
       loading="eager"
-      onError={() => setFailed(true)}
+      onError={handleError}
     />
   );
 }
@@ -63,6 +78,7 @@ export default function ResultCard({
   imageSrc,
   imageAlt,
   imageLayout = "portrait-left",
+  fallbackImageSrc,
 }: ResultCardProps) {
   return (
     <div className="rounded-2xl border p-4">
@@ -74,7 +90,12 @@ export default function ResultCard({
       {item ? (
         imageSrc && imageLayout === "banner-top" ? (
           <div className="space-y-3">
-            <CardImage src={imageSrc} alt={imageAlt ?? item} layout="banner-top" />
+            <CardImage
+              src={imageSrc}
+              alt={imageAlt ?? item}
+              layout="banner-top"
+              fallbackSrc={fallbackImageSrc}
+            />
 
             <div className="min-w-0">
               <div className="text-lg font-semibold text-slate-900">{item}</div>
@@ -86,7 +107,12 @@ export default function ResultCard({
         ) : (
           <div className="flex items-start gap-3">
             {imageSrc ? (
-              <CardImage src={imageSrc} alt={imageAlt ?? item} layout="portrait-left" />
+              <CardImage
+                src={imageSrc}
+                alt={imageAlt ?? item}
+                layout="portrait-left"
+                fallbackSrc={fallbackImageSrc}
+              />
             ) : null}
 
             <div className="min-w-0">
