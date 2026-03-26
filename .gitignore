@@ -25,6 +25,8 @@ dist-ssr
 
 # development image folders and files 
 /public/images/investigators/unprocessed-images/
+/public/images/episodes /finished/
+/public/images/episodes/backup/
 
 # other file versions
 /src/App-v1.tsx

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { CHARACTERS } from "./INVESTIGATORS";
-import { SCENARIOS } from "./SCENARIOS";
+import { EPISODES } from "./EPISODES";
 import { OLD_ONES } from "./OLD_ONES";
 import { COLLECTION } from "./COLLECTION";
 import SectionTitle from "./assets/components/SectionTitle";
@@ -19,12 +19,12 @@ import "./assets/backgrounds.css";
  * ✅ What it does
  * - Lets users pick what content (Seasons/Expansions) they own
  * - Persists their collection in localStorage
- * - Lets users choose which categories to randomize (Character, Old One, Scenario)
+ * - Lets users choose which categories to randomize (Character, Old One, Episode)
  * - Generates random results filtered by owned content
  * - Shows where each result comes from (Season/Expansion)
  *
  * 🧩 What you’ll likely add later
- * - Full data set (all Seasons, Expansions, characters, Old Ones, scenarios)
+ * - Full data set (all Seasons, Expansions, characters, Old Ones, episodes)
  * - Random Monsters option
  * - Shareable links, advanced filters, multiple result rolls, etc.
  */
@@ -73,10 +73,10 @@ export interface OldOne {
   expansionId: ID;
 }
 
-export interface Scenario {
+export interface Episode {
   id: ID;
   name: string;
-  // Some scenarios are in the core Season box, some in expansions
+  // Some episodes are in the core Season box, some in expansions
   expansionId: ID;
   description: string;
 }
@@ -189,17 +189,17 @@ export default function App() {
   // Character slots are more complex (value + locked state), so we manage them separately and reset to initial on player count change
   const [characterSlots, setCharacterSlots] = useState<CharacterSlot[]>(() => makeCharacterSlots(playerCount));
 
-  // Locks for Old One and Scenario results
+  // Locks for Old One and Episode results
   const [oldOneLocked, setOldOneLocked] = useState(false);
-  const [scenarioLocked, setScenarioLocked] = useState(false);
+  const [episodeLocked, setEpisodeLocked] = useState(false);
 
   const [resultOldOne, setResultOldOne] = useState<OldOne | null>(null);
-  const [resultScenario, setResultScenario] = useState<Scenario | null>(null);
+  const [resultEpisode, setResultEpisode] = useState<Episode | null>(null);
 
   // Create pools filtered by owned collection
   const characterPool = CHARACTERS.filter((c) => owned.includes(c.expansionId));
   const oldOnePool = OLD_ONES.filter((o) => owned.includes(o.expansionId));
-  const scenarioPool = SCENARIOS.filter((s) => owned.includes(s.expansionId));
+  const episodePool = EPISODES.filter((s) => owned.includes(s.expansionId));
 
   // Track if user has rolled at least once to conditionally show results section and messages
   const [hasRolled, setHasRolled] = useState(false);
@@ -239,8 +239,8 @@ export default function App() {
     // Old One: roll only if not locked
     if (!oldOneLocked) setResultOldOne(pickRandomFrom(oldOnePool));
 
-    // Scenario: roll only if not locked
-    if (!scenarioLocked) setResultScenario(pickRandomFrom(scenarioPool));
+    // Episode: roll only if not locked
+    if (!episodeLocked) setResultEpisode(pickRandomFrom(episodePool));
   }
 
   // UI helpers
@@ -259,9 +259,9 @@ export default function App() {
         return shouldClear ? null : prevOld;
       });
 
-      setResultScenario((prevScn) => {
+      setResultEpisode((prevScn) => {
         const shouldClear = prevScn?.expansionId === id;
-        if (shouldClear) setScenarioLocked(false);
+        if (shouldClear) setEpisodeLocked(false);
         return shouldClear ? null : prevScn;
       });
     }
@@ -276,7 +276,7 @@ export default function App() {
     if (nextOwned.length === 0) setHasRolled(false);
   }
 
-  function formatScenarioTag(id: string): string | null {
+  function formatEpisodeTag(id: string): string | null {
     // Match patterns like S1E1, S10E3, etc.
     const match = id.match(/^S(\d+)E(\d+)$/);
     if (!match) return null;
@@ -291,8 +291,8 @@ export default function App() {
     setCharacterSlots((prev) => prev.map((s) => ({ ...s, value: null, locked: false })));
     setResultOldOne(null);
     setOldOneLocked(false);
-    setResultScenario(null);
-    setScenarioLocked(false);
+    setResultEpisode(null);
+    setEpisodeLocked(false);
     setHasRolled(false);
   }
 
@@ -305,9 +305,9 @@ export default function App() {
       return shouldClear ? null : prev;
     });
 
-    setResultScenario((prev) => {
+    setResultEpisode((prev) => {
       const shouldClear = prev && !nextOwned.includes(prev.expansionId);
-      if (shouldClear) setScenarioLocked(false);
+      if (shouldClear) setEpisodeLocked(false);
       return shouldClear ? null : prev;
     });
   }
@@ -318,6 +318,10 @@ export default function App() {
 
   function getOldOneImageSrcById(id: string) {
     return `/images/oldones/${id}.png`;
+  }
+
+  function getEpisodeImageSrcById(id: string) {
+    return `/images/episodes/${id}.jpg`;
   }
 
   useEffect(() => {
@@ -376,8 +380,8 @@ export default function App() {
   }, []);
 
   const safeOldOne = resultOldOne && owned.includes(resultOldOne.expansionId) ? resultOldOne : null;
-  const safeScenario = resultScenario && owned.includes(resultScenario.expansionId) ? resultScenario : null;
-  const scenarioTag = safeScenario ? formatScenarioTag(safeScenario.id) : null;
+  const safeEpisode = resultEpisode && owned.includes(resultEpisode.expansionId) ? resultEpisode : null;
+  const episodeTag = safeEpisode ? formatEpisodeTag(safeEpisode.id) : null;
 
   const showResultsCards = owned.length > 0 && hasRolled;
 
@@ -486,13 +490,16 @@ export default function App() {
                     />
 
                     <ResultCard
-                      title="Scenario"
-                      item={safeScenario ? `${scenarioTag ? scenarioTag + ": " : ""}${safeScenario.name}` : undefined}
-                      location={safeScenario ? getCollectionById(safeScenario.expansionId)?.name : undefined}
-                      emptyHint={scenarioPool.length ? "Click Randomize" : "No scenarios in owned collection"}
+                      title="Episode"
+                      item={safeEpisode ? `${episodeTag ? `${episodeTag}: ` : ""}${safeEpisode.name}` : undefined}
+                      location={safeEpisode ? getCollectionById(safeEpisode.expansionId)?.name : undefined}
+                      emptyHint={episodePool.length ? "Click Randomize" : "No episodes in owned collection"}
+                      imageSrc={safeEpisode ? getEpisodeImageSrcById(safeEpisode.id) : undefined}
+                      imageAlt={safeEpisode ? `${safeEpisode.name} episode art` : undefined}
+                      imageLayout="banner-top"
                       rightSlot={
                         <label className="flex items-center gap-2 text-xs text-slate-600">
-                          <input type="checkbox" className="size-4 accent-slate-800" disabled={!safeScenario} checked={safeScenario ? scenarioLocked : false} onChange={(e) => setScenarioLocked(e.target.checked)} />
+                          <input type="checkbox" className="size-4 accent-slate-800" disabled={!safeEpisode} checked={safeEpisode ? episodeLocked : false} onChange={(e) => setEpisodeLocked(e.target.checked)} />
                           Keep
                         </label>
                       }

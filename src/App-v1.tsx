@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { CHARACTERS } from "./INVESTIGATORS";
-import { SCENARIOS } from "./SCENARIOS";
+import { SCENARIOS } from "./EPISODES";
 import { OLD_ONES } from "./OLD_ONES";
 import { COLLECTION } from "./COLLECTION";
 import SectionTitle from "./assets/components/SectionTitle";

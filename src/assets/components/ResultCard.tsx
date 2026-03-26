@@ -5,23 +5,43 @@ type ResultCardProps = {
   item?: string;
   location?: string;
   emptyHint: string;
-
-  // header right side (your checkbox)
   rightSlot?: React.ReactNode;
 
-  // NEW: optional portrait image shown to the left of the item text
   imageSrc?: string;
   imageAlt?: string;
+
+  // new
+  imageLayout?: "portrait-left" | "banner-top";
 };
 
-function CardImage({ src, alt }: { src: string; alt: string }) {
+function CardImage({
+  src,
+  alt,
+  layout = "portrait-left",
+}: {
+  src: string;
+  alt: string;
+  layout?: "portrait-left" | "banner-top";
+}) {
   const [failed, setFailed] = React.useState(false);
 
   React.useEffect(() => {
-    setFailed(false); // ✅ reset any previous error when src changes
+    setFailed(false);
   }, [src]);
 
   if (failed) return null;
+
+  if (layout === "banner-top") {
+    return (
+      <img
+        src={src}
+        alt={alt}
+        className="w-full h-40 sm:h-44 object-cover object-center rounded-xl border bg-slate-100 border-b-slate-900 border-b-3"
+        loading="eager"
+        onError={() => setFailed(true)}
+      />
+    );
+  }
 
   return (
     <img
@@ -42,6 +62,7 @@ export default function ResultCard({
   rightSlot,
   imageSrc,
   imageAlt,
+  imageLayout = "portrait-left",
 }: ResultCardProps) {
   return (
     <div className="rounded-2xl border p-4">
@@ -51,19 +72,34 @@ export default function ResultCard({
       </div>
 
       {item ? (
-  <div className="flex items-start gap-3">
-    {/* Image (left) */}
-    {imageSrc ? <CardImage src={imageSrc} alt={imageAlt ?? item} /> : null}
+        imageSrc && imageLayout === "banner-top" ? (
+          <div className="space-y-3">
+            <CardImage src={imageSrc} alt={imageAlt ?? item} layout="banner-top" />
 
-    {/* Text (right) */}
-    <div className="min-w-0">
-      <div className="text-lg font-semibold text-slate-900">{item}</div>
-      {location && <div className="text-sm text-slate-600">Found in: {location}</div>}
-    </div>
-  </div>
-) : (
-  <div className="text-slate-500">{emptyHint}</div>
-)}
+            <div className="min-w-0">
+              <div className="text-lg font-semibold text-slate-900">{item}</div>
+              {location && (
+                <div className="text-sm text-slate-600">Found in: {location}</div>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-start gap-3">
+            {imageSrc ? (
+              <CardImage src={imageSrc} alt={imageAlt ?? item} layout="portrait-left" />
+            ) : null}
+
+            <div className="min-w-0">
+              <div className="text-lg font-semibold text-slate-900">{item}</div>
+              {location && (
+                <div className="text-sm text-slate-600">Found in: {location}</div>
+              )}
+            </div>
+          </div>
+        )
+      ) : (
+        <div className="text-slate-500">{emptyHint}</div>
+      )}
     </div>
   );
 }
